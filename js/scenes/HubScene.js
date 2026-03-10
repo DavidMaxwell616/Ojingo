@@ -5,18 +5,19 @@ const ROUNDS = [
     { key: "RedLight", name: "RED LIGHT / GREEN LIGHT" },
     { key: "Honeycomb", name: "HONEYCOMB TRACE" },
     { key: "Tug", name: "TUG OF WAR" },
+    { key: "GlassBridge", name: "GLASS BRIDGE" },
     { key: "Final", name: "OJINGO FINAL ARENA" }
 ];
 
-export default class HudScene extends Phaser.Scene {
-    constructor() { super("Hud"); }
+export default class HubScene extends Phaser.Scene {
+    constructor() { super("Hub"); }
 
     create() {
         this.cameras.main.setBackgroundColor(PAL.BG);
         this.cameras.main.setPostPipeline("CRTPipeline");
 
         addFrame(this);
-        addHeader(this, "HUD");
+        addHeader(this, "MAIN MENU");
 
         this.moneyText = makeRetroText(this, 140, 44, "", 16, "#48ff7a").setOrigin(0, 0.5);
         this.deathText = makeRetroText(this, W - 140, 44, "", 16, "#ff3a3a").setOrigin(1, 0.5);
@@ -55,10 +56,10 @@ export default class HudScene extends Phaser.Scene {
         keys.enter.on("down", () => this.launch());
         keys.r.on("down", () => this.resetRun());
 
-        this.updateHUD();
+        this.updateHub();
     }
 
-    updateHUD() {
+    updateHub() {
         const money = this.registry.get("money") || 0;
         const deaths = this.registry.get("deaths") || 0;
         this.moneyText.setText(`₩ ${money.toString().padStart(6, "0")}`);
@@ -78,7 +79,7 @@ export default class HudScene extends Phaser.Scene {
 
     launch() {
         beep(this, 760, 0.06, "square", 0.04);
-        const r = ["RedLight", "Honeycomb", "Tug", "Final"][this.sel];
+        const r = ["RedLight", "Honeycomb", "Tug", "GlassBridge", "Final"][this.sel];
         this.scene.start(r);
     }
 

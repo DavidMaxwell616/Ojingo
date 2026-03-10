@@ -31,7 +31,7 @@ export default class HoneycombScene extends Phaser.Scene {
         this.shapeName = shapes[Phaser.Math.Between(0, shapes.length - 1)];
 
         this.info = makeRetroText(this, W / 2, 130, `TRACE: ${this.shapeName}`, 18, "#ffe35a");
-        makeRetroText(this, W / 2, H - 60, "HOLD MOUSE / TOUCH TO SCRATCH • STAY ON THE LINE • [ESC] HUD", 14, "#b7b7ff");
+        makeRetroText(this, W / 2, H - 60, "HOLD MOUSE / TOUCH TO SCRATCH • STAY ON THE LINE • [ESC] MAIN MENU", 14, "#b7b7ff");
 
         this.g = this.add.graphics();
         this.g.lineStyle(6, PAL.YEL, 0.85);
@@ -55,7 +55,7 @@ export default class HoneycombScene extends Phaser.Scene {
         this.input.on("pointerdown", (p) => { this.pointerDown = true; this.lastP = { x: p.x, y: p.y }; beep(this, 700, 0.02, "square", 0.02); });
         this.input.on("pointerup", () => { this.pointerDown = false; this.lastP = null; });
 
-        this.input.keyboard.on("keydown-ESC", () => this.scene.start("Hud"));
+        this.input.keyboard.on("keydown-ESC", () => this.scene.start("Hub"));
 
         // Precompute poly segments for distance checks
         this.segs = this.buildSegments();
@@ -136,7 +136,7 @@ export default class HoneycombScene extends Phaser.Scene {
         beep(this, 120, 0.12, "sawtooth", 0.04);
         this.registry.set("deaths", (this.registry.get("deaths") || 0) + 1);
         makeRetroText(this, W / 2, H / 2, "CRACKED", 34, "#ff3a3a").setShadow(0, 3, "#000", 5, true, true);
-        this.time.delayedCall(1200, () => this.scene.start("Hud"));
+        this.time.delayedCall(1200, () => this.scene.start("Hub"));
     }
 
     win() {
@@ -145,7 +145,7 @@ export default class HoneycombScene extends Phaser.Scene {
         const idx = this.registry.get("roundIndex") || 0;
         this.registry.set("roundIndex", Math.max(idx, 2));
         makeRetroText(this, W / 2, H / 2, "CLEAN CUT", 34, "#48ff7a").setShadow(0, 3, "#000", 5, true, true);
-        this.time.delayedCall(1100, () => this.scene.start("Hud"));
+        this.time.delayedCall(1100, () => this.scene.start("Hub"));
     }
 
     update() {

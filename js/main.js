@@ -3,10 +3,11 @@ import { CRTPipeline } from "./fx/CRTPipeline.js";
 
 import BootScene from "./scenes/BootScene.js";
 import MenuScene from "./scenes/MenuScene.js";
-import HudScene from "./scenes/HudScene.js";
+import HubScene from "./scenes/HubScene.js";
 import RedLightScene from "./scenes/RedLightScene.js";
 import HoneycombScene from "./scenes/HoneycombScene.js";
 import TugScene from "./scenes/TugScene.js";
+import GlassBridgeScene from "./scenes/GlassBridgeScene.js";
 import FinalScene from "./scenes/FinalScene.js";
 
 const config = {
@@ -27,10 +28,11 @@ const config = {
     scene: [
         BootScene,
         MenuScene,
-        HudScene,
+        HubScene,
         RedLightScene,
         HoneycombScene,
         TugScene,
+        GlassBridgeScene,
         FinalScene
     ]
 };

@@ -5,10 +5,16 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super("Boot"); }
 
     preload() {
-        // no external assets
+        this.load.path = "../../assets/spritesheets/";
+        this.load.spritesheet('stickman', 'stickman.png', {
+            frameWidth: 76,
+            frameHeight: 123
+        });
+
     }
 
     create() {
+
         // Create 1x1 pixel texture "px"
         const g = this.add.graphics();
         g.fillStyle(0xffffff, 1);

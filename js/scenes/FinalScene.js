@@ -1,5 +1,5 @@
 import { W, H, PAL } from "../config.js";
-import Player from "../objects/Player.js";
+
 import { addFrame, addHeader, makeRetroText, beep } from "../objects/UI.js";
 
 function centroid(pts) {
@@ -30,7 +30,7 @@ export default class FinalScene extends Phaser.Scene {
         this.add.tileSprite(W / 2, H / 2, W, H, "tile").setAlpha(0.18);
 
         makeRetroText(this, W / 2, 130, "ATTACKER: HOP → BRIDGE/ENTRY → TWO FEET → REACH HEAD", 16, "#ffe35a");
-        makeRetroText(this, W / 2, H - 60, "WASD/ARROWS MOVE • SPACE HOP BOOST • [ESC] HUD", 14, "#b7b7ff");
+        makeRetroText(this, W / 2, H - 60, "WASD/ARROWS MOVE • SPACE HOP BOOST • [ESC] MAIN MENU", 14, "#b7b7ff");
 
         // ---- Squid field geometry (stylized, but rule-accurate territories) ----
         // Inside polygon = defense territory. Outside = offense territory.
@@ -114,7 +114,7 @@ export default class FinalScene extends Phaser.Scene {
         // ---- Defender (AI) ----
         this.def = this.physics.add.sprite(W / 2, 320, "px");
         this.def.setTint(PAL.RED);
-        this.def.setScale(18, 18);
+        this.def.setScale(.35, .35);
         this.def.setCollideWorldBounds(true);
         this.defSpeed = 240;
 
@@ -133,7 +133,7 @@ export default class FinalScene extends Phaser.Scene {
         // UI status
         this.status = makeRetroText(this, W / 2, 162, "", 16, "#e8e8ff");
 
-        this.input.keyboard.on("keydown-ESC", () => this.scene.start("Hud"));
+        this.input.keyboard.on("keydown-ESC", () => this.scene.start("Hub"));
 
         this.state = "PLAY";
     }
@@ -160,7 +160,7 @@ export default class FinalScene extends Phaser.Scene {
         makeRetroText(this, W / 2, H / 2, reason, 34, "#ff3a3a")
             .setShadow(0, 3, "#000", 5, true, true);
 
-        this.time.delayedCall(1300, () => this.scene.start("Hud"));
+        this.time.delayedCall(1300, () => this.scene.start("Hub"));
     }
 
     win() {
@@ -177,7 +177,7 @@ export default class FinalScene extends Phaser.Scene {
         makeRetroText(this, W / 2, H / 2, "MANSAE!", 44, "#48ff7a")
             .setShadow(0, 3, "#000", 6, true, true);
 
-        this.time.delayedCall(1400, () => this.scene.start("Hud"));
+        this.time.delayedCall(1400, () => this.scene.start("Hub"));
     }
 
     update() {

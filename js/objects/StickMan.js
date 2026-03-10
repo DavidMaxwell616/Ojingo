@@ -1,12 +1,12 @@
 import { PAL } from "../config.js";
 
-export default class Player {
+export default class StickMan {
     constructor(scene, x, y, color = PAL.GRN) {
         this.scene = scene;
 
-        this.sprite = scene.physics.add.sprite(x, y, "px");
+        this.sprite = scene.physics.add.sprite(x, y, "stickman");
         this.sprite.setTint(color);
-        this.sprite.setScale(18, 18);
+        this.sprite.setScale(.35, .35);
         this.sprite.setCollideWorldBounds(true);
 
         this.speed = 240;
@@ -14,6 +14,8 @@ export default class Player {
 
         this._vx = 0;
         this._vy = 0;
+
+
     }
 
     setControls(cursors, wasd) {
@@ -36,7 +38,10 @@ export default class Player {
 
         let vx = 0, vy = 0;
         if (left) vx -= 1;
-        if (right) vx += 1;
+        if (right) {
+            this.sprite.play(this.scene.stickManAnim);
+            vx++;
+        }
         if (up) vy -= 1;
         if (down) vy += 1;
 
