@@ -758,7 +758,56 @@ export default class RedLightScene extends Phaser.Scene {
         const elim = this.competitors.filter(c => !c.alive).length;
         this.countText.setText(`COMPETITORS — ALIVE: ${alive}  FINISHED: ${finished}  ELIM: ${elim}`);
     }
+    eliminatePlayer() {
+        if (this.dead || !this.player?.sprite?.active) return;
 
+        this.dead = true;
+
+        const px = this.player.sprite.x;
+        const py = this.player.sprite.y;
+
+        const g = this.nearestGuardTo(px, py);
+        this.shootBulletAt(g, px, py);
+
+        beep(this, 140, 0.08, "square", 0.04);
+        this.cameras.main.shake(140, 0.006);
+
+        this.player.sprite.setTint(PAL.RED);
+        this.player.sprite.body.setDrag(1400, 1400);
+        this.player.sprite.setVelocity(
+            -Phaser.Math.Between(70, 130),
+            Phaser.Math.Between(-40, 40)
+        );
+
+        this.stateText.setText("ELIMINATED");
+        this.stateText.setColor("#ff3a3a");
+
+        // stop competitors immediately and keep them frozen
+        for (const c of this.competitors) {
+            if (!c?.sprite?.active) continue;
+
+            c.frozen = true;
+            c.freezeUntil = this.time.now + 10000;
+
+            c.sprite.setVelocity(0, 0);
+            c.sprite.anims.stop();
+            c.sprite.setFrame(0);
+
+            if (c.sprite.body) {
+                c.sprite.body.moves = false;
+            }
+        }
+        this.player.kill();
+        this.time.delayedCall(320, () => {
+            if (!this.player?.sprite?.active) return;
+            this.player.sprite.setVelocity(0, 0);
+            this.player.sprite.angle = 90;
+        });
+
+        this.time.delayedCall(5000, () => {
+            this.scene.start("Hub");
+        });
+    }
     update() {
         if (this.dead || this.win) return;
 
@@ -773,10 +822,12 @@ export default class RedLightScene extends Phaser.Scene {
 
         if (!this.green) {
             const v = this.player.getVelocityMag();
-            if (v > this.threshold) this.dead = true;
+            if (v > this.threshold) {
+                this.eliminatePlayer();
+            }
         }
 
-        if (this.player.sprite.x >= this.goalX - 10) {
+        if (this.player.sprite.x >= this.goalX) {
             this.win = true;
         }
     }

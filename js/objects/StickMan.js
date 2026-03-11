@@ -63,7 +63,7 @@ export default class StickMan {
         this.sprite.setVelocity(0, 0);
         this.sprite.anims.stop();
         this.sprite.setFrame(0);
-        this.rotation(90);
+        this.sprite.angle = 90;
         this.sprite.setTint(PAL.RED);
     }
 
