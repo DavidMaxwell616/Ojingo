@@ -2,14 +2,18 @@
 // - Raycast spotlights (multi-ray cone clipped by first body hit)
 // - Bullets/tracers when a competitor is eliminated
 // - ONLY eliminate competitors if they are (a) moving on RED and (b) inside a spotlight cone
-//   (No more global "moving on red anywhere = eliminated" for competitors)
 
 import { W, H, PAL } from "../config.js";
 import StickMan from "../objects/StickMan.js";
 import { addFrame, addHeader, makeRetroText, beep } from "../objects/UI.js";
 
-function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+}
+
+function pick(arr) {
+    return arr[(Math.random() * arr.length) | 0];
+}
 
 // Ray vs axis-aligned box (returns distance t along ray, or Infinity)
 function rayAABB(ox, oy, dx, dy, minX, minY, maxX, maxY) {
@@ -30,7 +34,9 @@ function rayAABB(ox, oy, dx, dy, minX, minY, maxX, maxY) {
 }
 
 export default class RedLightScene extends Phaser.Scene {
-    constructor() { super("RedLight"); }
+    constructor() {
+        super("RedLight");
+    }
 
     create() {
         this.cameras.main.setBackgroundColor(PAL.BG);
@@ -46,11 +52,12 @@ export default class RedLightScene extends Phaser.Scene {
         this.goalX = W - 90;
         const goal = this.add.rectangle(this.goalX, H / 2, 20, H - 120, PAL.YEL, 0.9);
         goal.setStrokeStyle(2, PAL.INK, 0.8);
-        //Young-hee
+
+        // Young-hee
         this.youngHee = this.createYoungHee(this.goalX + 48, H / 2);
+
         // Player
         this.player = new StickMan(this, 120, H / 2, PAL.GRN);
-
         this.player.setControls(
             this.input.keyboard.createCursorKeys(),
             this.input.keyboard.addKeys("W,A,S,D")
@@ -68,21 +75,25 @@ export default class RedLightScene extends Phaser.Scene {
         for (let i = 0; i < this.competitorCount; i++) {
             const laneY = Phaser.Math.Linear(topY, bottomY, i / (this.competitorCount - 1));
             const c = new StickMan(this, 120 + Phaser.Math.Between(-10, 20), laneY, PAL.WHITE);
+
             c.sprite.setTint(Phaser.Display.Color.RandomRGB(100, 255).color);
-            c.sprite.setScale(.35, .35);
+            c.sprite.setScale(0.35, 0.35);
             c.sprite.setCollideWorldBounds(true);
             c.sprite.body.setBounce(0.35, 0.35);
             c.sprite.body.setDrag(700, 700);
             c.sprite.body.setMaxVelocity(330, 330);
+
             c.alive = true;
             c.finished = false;
             c.place = 0;
             c._id = i + 1;
-            c.laneY;
+
+            c.laneY = laneY;
             c.baseSpeed = Phaser.Math.Between(150, 250);
             c.reactionMs = Phaser.Math.Between(70, 380);
             c.risk = Phaser.Math.FloatBetween(0.06, 0.33);
             c.panic = Phaser.Math.FloatBetween(0.0, 1.0);
+
             c.plan = "SPRINT";
             c.planUntil = 0;
             c.targetY = laneY;
@@ -92,83 +103,95 @@ export default class RedLightScene extends Phaser.Scene {
             c.fakeStopAt = 0;
             c.redStopAt = 0;
             c.stopStartedAt = 0;
+
             c.frozen = false;
             c.freezeUntil = 0;
             c.minFreezeMs = Phaser.Math.Between(900, 1800);
-            c.eliminated = false; // prevents double-bullets
+
+            c.eliminated = false;
             this.competitors.push(c);
         }
 
-        this.stickManAnim = this.anims.create({
-            key: "stickman",
-            frames: this.anims.generateFrameNumbers("stickman", { start: 1, end: 6 }),
-            frameRate: 18,
-            repeat: -1
-        });
+        if (!this.anims.exists("stickman_run")) {
+            this.anims.create({
+                key: "stickman_run",
+                frames: this.anims.generateFrameNumbers("stickman", { start: 1, end: 6 }),
+                frameRate: 18,
+                repeat: -1
+            });
+        }
 
-        this.physics.add.collider(this.competitors, this.competitors);
-        this.physics.add.collider(this.player.sprite, this.competitors);
+        if (!this.anims.exists("stickman_walk")) {
+            this.anims.create({
+                key: "stickman_walk",
+                frames: this.anims.generateFrameNumbers("stickman", { start: 7, end: 10 }),
+                frameRate: 18,
+                repeat: -1
+            });
+        }
 
-        // MAIN MENU
+
         this.stateText = makeRetroText(this, W / 2, 130, "", 20, "#e8e8ff");
         this.countText = makeRetroText(this, W / 2, 160, "", 16, "#e8e8ff");
 
-        this.guard1 = this.add.container(0, 0).setDepth(200);
-        this.guard2 = this.add.container(0, 0).setDepth(200);
+        // Guards
+        this.guard1 = this.add.container(W - 120, 80).setDepth(200);
+        this.guard2 = this.add.container(W - 120, H - 80).setDepth(200);
 
-        const turret = this.add.rectangle(W - 120, 80, 38, 38, PAL.GRY, 0.95).setStrokeStyle(2, PAL.INK, 0.8);
-        const barrel = this.add.rectangle(W - 120, 102, 4, 46, PAL.BLU, 0.7).setStrokeStyle(2, PAL.INK, 0.8).setOrigin(0.12, 0.5);;
-        turret.name = 'turret';
-        barrel.name = 'barrel';
-        barrel.setAngle(45);
-
-        this.guard1.phase = 0.0;
+        const turret = this.add.rectangle(0, 0, 38, 38, PAL.GRY, 0.95)
+            .setStrokeStyle(2, PAL.INK, 0.8);
+        const barrel = this.add.rectangle(0, 0, 56, 10, PAL.BLU, 0.7)
+            .setStrokeStyle(2, PAL.INK, 0.8)
+            .setOrigin(0.12, 0.5);
+        turret.name = "turret";
+        barrel.name = "barrel";
+        barrel.setAngle(180);
         this.guard1.add([turret, barrel]);
 
-        const turret2 = this.add.rectangle(W - 120, H - 80, 38, 38, PAL.GRY, 0.95).setStrokeStyle(2, PAL.INK, 0.8);
-        const barrel2 = this.add.rectangle(W - 120, H - 102, 4, 46, PAL.BLU, 0.7).setStrokeStyle(2, PAL.INK, 0.8).setOrigin(0.12, 0.5);;
-        turret2.name = 'turret';
-        barrel2.name = 'barrel';
-        barrel2.setAngle(315);
+        const turret2 = this.add.rectangle(0, 0, 38, 38, PAL.GRY, 0.95)
+            .setStrokeStyle(2, PAL.INK, 0.8);
+        const barrel2 = this.add.rectangle(0, 0, 56, 10, PAL.BLU, 0.7)
+            .setStrokeStyle(2, PAL.INK, 0.8)
+            .setOrigin(0.12, 0.5);
+        turret2.name = "turret";
+        barrel2.name = "barrel";
+        barrel2.setAngle(180);
         this.guard2.add([turret2, barrel2]);
 
         this.spotG = this.add.graphics().setDepth(180);
         this.spotG.setBlendMode(Phaser.BlendModes.ADD);
 
-        // Bullet / tracer layer
         this.tracerG = this.add.graphics().setDepth(220);
 
-        // Spotlight tuning
         this.spotLen = 820;
         this.spotHalf = 0.38;
         this.spotRays = 28;
         this.spotAlpha = 0.14;
 
-        // State
         this.green = true;
         this.dead = false;
         this.win = false;
 
-        // Movement thresholds
-        this.threshold = 16;      // general movement threshold (player rule can use this)
-        this.spotMoveThresh = 6;  // movement needed to count as "moving" in spotlight (competitors)
+        this.threshold = 16;
+        this.spotMoveThresh = 6;
 
-        // For detection each frame on RED
         this.activeCones = [];
 
         this.input.keyboard.on("keydown-ESC", () => this.scene.start("Hub"));
 
-        // initialize plans so they don't all act identical
         const now = this.time.now;
-        for (const c of this.competitors) { this.rollPlan(c, now); this.retarget(c, now); }
+        for (const c of this.competitors) {
+            this.rollPlan(c, now);
+            this.retarget(c, now);
+        }
 
         this.scheduleFlip();
     }
 
-    // ---------------- Random plan ----------------
     rollPlan(c, now) {
         const opts = ["SPRINT", "CAUTIOUS", "ZIGZAG", "DRIFT_UP", "DRIFT_DOWN", "BURST_COAST", "FAKE_STOP"];
         const bag = [];
+
         bag.push("SPRINT", "SPRINT", "CAUTIOUS");
         bag.push(c.panic > 0.55 ? "ZIGZAG" : "SPRINT");
         bag.push(c.risk > 0.22 ? "BURST_COAST" : "CAUTIOUS");
@@ -182,6 +205,7 @@ export default class RedLightScene extends Phaser.Scene {
         if (c.plan === "BURST_COAST") c.burstUntil = now + Phaser.Math.Between(220, 420);
         if (c.plan === "FAKE_STOP") c.fakeStopAt = now + Phaser.Math.Between(220, 520);
     }
+
     setYoungHeeMode(mode) {
         if (!this.youngHee) return;
 
@@ -197,12 +221,10 @@ export default class RedLightScene extends Phaser.Scene {
 
         const yh = this.youngHee;
 
-        // smooth head turn
         const diff = Phaser.Math.Angle.Wrap(yh.targetAngle - yh.currentAngle);
         yh.currentAngle += diff * 0.12;
         yh.headPivot.rotation = yh.currentAngle;
 
-        // beam only during RED
         yh.beam.clear();
         if (this.green) return;
 
@@ -211,7 +233,7 @@ export default class RedLightScene extends Phaser.Scene {
 
         const beamLen = 760;
         const half = 0.22;
-        const center = yh.currentAngle + Math.PI; // eyes point toward playfield
+        const center = yh.currentAngle + Math.PI;
 
         const p1x = eyeX + Math.cos(center - half) * beamLen;
         const p1y = eyeY + Math.sin(center - half) * beamLen;
@@ -229,15 +251,16 @@ export default class RedLightScene extends Phaser.Scene {
         yh.beam.lineStyle(1, 0xff9999, 0.18);
         yh.beam.strokePath();
     }
+
     retarget(c, now) {
         const drift = Phaser.Math.Between(-36, 36) * (0.6 + c.panic * 0.9);
         c.targetY = clamp(c.laneY + drift, 140, H - 120);
         c.nextTargetAt = now + Phaser.Math.Between(160, 360);
     }
 
-    // ---------------- GREEN / RED flip ----------------
     scheduleFlip() {
         const delay = Phaser.Math.Between(900, 1900);
+
         this.time.delayedCall(delay, () => {
             this.green = !this.green;
             const now = this.time.now;
@@ -252,7 +275,7 @@ export default class RedLightScene extends Phaser.Scene {
                     c.stopStartedAt = 0;
                     c.frozen = false;
                     c.freezeUntil = 0;
-                    if (c.s?.body) c.sprite.body.moves = true;
+                    if (c.sprite?.body) c.sprite.body.moves = true;
 
                     if (c.alive && !c.finished) {
                         this.rollPlan(c, now);
@@ -268,10 +291,9 @@ export default class RedLightScene extends Phaser.Scene {
                 for (const c of this.competitors) {
                     c.redStopAt = now + c.reactionMs + Phaser.Math.Between(0, 120);
                     c.stopStartedAt = now;
-
                     c.frozen = false;
                     c.freezeUntil = 0;
-                    if (c.s?.body) c.sprite.body.moves = true;
+                    if (c.sprite?.body) c.sprite.body.moves = true;
                 }
             }
 
@@ -279,90 +301,24 @@ export default class RedLightScene extends Phaser.Scene {
         });
     }
 
-    // ---------------- Raycast spotlights ----------------
-    getRaycastTargets() {
-        const targets = [];
-
-        // player (optional occluder)
-        const pb = this.player?.sprite?.body;
-        if (pb) targets.push(pb);
-
-        // competitors (occluders)
-        for (const c of this.competitors) {
-            if (!c.alive || c.finished) continue;
-            const b = c.s?.body;
-            if (b) targets.push(b);
-        }
-
-        return targets;
-    }
-
-    // Returns polygon points for cone (raycast clipped) and stores cone for detection
-    raycastConePoints(ox, oy, angle, half, maxLen, rays, bodies) {
-        const pts = [];
-        const a0 = angle - half;
-        const a1 = angle + half;
-
-        for (let i = 0; i <= rays; i++) {
-            const a = Phaser.Math.Linear(a0, a1, i / rays);
-            const dx = Math.cos(a);
-            const dy = Math.sin(a);
-
-            let bestT = maxLen;
-
-            for (const b of bodies) {
-                const minX = b.x;
-                const minY = b.y;
-                const maxX = b.x + b.width;
-                const maxY = b.y + b.height;
-
-                const hitT = rayAABB(ox, oy, dx, dy, minX, minY, maxX, maxY);
-                if (hitT >= 0 && hitT < bestT) bestT = hitT;
-            }
-
-            pts.push({ x: ox + dx * bestT, y: oy + dy * bestT });
-        }
-
-        return pts;
-    }
-
-    pointInCone(px, py, ox, oy, ang, half, len) {
-        const vx = px - ox;
-        const vy = py - oy;
-        const d = Math.hypot(vx, vy);
-        if (d > len) return false;
-
-        const a = Math.atan2(vy, vx);
-        let da = a - ang;
-        while (da > Math.PI) da -= Math.PI * 2;
-        while (da < -Math.PI) da += Math.PI * 2;
-
-        return Math.abs(da) <= half;
-    }
     createYoungHee(x, y) {
         const root = this.add.container(x, y).setDepth(160);
 
-        // body
         const body = this.add.graphics();
         body.lineStyle(2, 0x000000, 1);
 
-        // hair
         body.fillStyle(0x111111, 1);
         body.fillRect(-14, -48, 28, 10);
 
-        // face
         body.fillStyle(0xf2c9a0, 1);
         body.fillRect(-12, -42, 24, 18);
 
-        // dress
         body.fillStyle(0xd96a2b, 1);
         body.fillRect(-16, -24, 32, 30);
 
-        // shirt
         body.fillStyle(0xf2d94e, 1);
         body.fillRect(-14, -20, 28, 10);
 
-        // legs
         body.lineStyle(3, 0xf2c9a0, 1);
         body.beginPath();
         body.moveTo(-6, 6);
@@ -371,7 +327,6 @@ export default class RedLightScene extends Phaser.Scene {
         body.lineTo(6, 26);
         body.strokePath();
 
-        // socks
         body.lineStyle(3, 0xffffff, 1);
         body.beginPath();
         body.moveTo(-6, 22);
@@ -380,7 +335,6 @@ export default class RedLightScene extends Phaser.Scene {
         body.lineTo(6, 28);
         body.strokePath();
 
-        // arms
         body.lineStyle(3, 0xf2c9a0, 1);
         body.beginPath();
         body.moveTo(-16, -12);
@@ -389,7 +343,6 @@ export default class RedLightScene extends Phaser.Scene {
         body.lineTo(26, -2);
         body.strokePath();
 
-        // pigtails
         body.lineStyle(3, 0x111111, 1);
         body.beginPath();
         body.moveTo(-12, -34);
@@ -400,7 +353,6 @@ export default class RedLightScene extends Phaser.Scene {
 
         root.add(body);
 
-        // head pivot
         const headPivot = this.add.container(0, -34);
 
         const head = this.add.graphics();
@@ -408,12 +360,10 @@ export default class RedLightScene extends Phaser.Scene {
         head.fillStyle(0xf2c9a0, 1);
         head.fillRect(-12, -10, 24, 20);
 
-        // eyes
         head.fillStyle(0x000000, 1);
         head.fillRect(-6, -2, 2, 2);
         head.fillRect(4, -2, 2, 2);
 
-        // mouth
         head.lineStyle(1, 0x662222, 1);
         head.beginPath();
         head.moveTo(-3, 5);
@@ -423,30 +373,37 @@ export default class RedLightScene extends Phaser.Scene {
         headPivot.add(head);
         root.add(headPivot);
 
-        // scan beam graphics
         const beam = this.add.graphics().setDepth(155);
 
         return {
             root,
             headPivot,
             beam,
-            mode: "GREEN", // GREEN looks away, RED looks at players
+            mode: "GREEN",
             lookAwayAngle: Math.PI,
             lookAtAngle: 0,
             currentAngle: Math.PI,
             targetAngle: Math.PI
         };
     }
+
     drawRaycastSpotlights() {
         this.spotG.clear();
         this.activeCones.length = 0;
+
         if (this.green || !this.youngHee) return;
 
         const bodies = [];
-        if (this.player?.sprite?.body?.enable) bodies.push(this.player.sprite.body);
+
+        if (this.player?.sprite?.body?.enable) {
+            bodies.push(this.player.sprite.body);
+        }
+
         for (const c of this.competitors) {
             if (!c.alive || c.eliminated || c.finished) continue;
-            if (c.s?.body?.enable) bodies.push(c.sprite.body);
+            if (c.sprite?.body?.enable) {
+                bodies.push(c.sprite.body);
+            }
         }
 
         const ox = this.youngHee.root.x;
@@ -455,6 +412,8 @@ export default class RedLightScene extends Phaser.Scene {
 
         const a0 = ang - this.spotHalf;
         const a1 = ang + this.spotHalf;
+
+        const poly = [{ x: ox, y: oy }];
 
         this.spotG.fillStyle(PAL.CYAN, this.spotAlpha);
         this.spotG.beginPath();
@@ -468,11 +427,24 @@ export default class RedLightScene extends Phaser.Scene {
             let dist = this.spotLen;
 
             for (const b of bodies) {
-                const hit = rayAABB(ox, oy, dx, dy, b.x, b.y, b.x + b.width, b.y + b.height);
+                const hit = rayAABB(
+                    ox,
+                    oy,
+                    dx,
+                    dy,
+                    b.x,
+                    b.y,
+                    b.right,
+                    b.bottom
+                );
                 if (hit >= 0 && hit < dist) dist = hit;
             }
 
-            this.spotG.lineTo(ox + dx * dist, oy + dy * dist);
+            const px = ox + dx * dist;
+            const py = oy + dy * dist;
+
+            this.spotG.lineTo(px, py);
+            poly.push({ x: px, y: py });
         }
 
         this.spotG.closePath();
@@ -486,31 +458,43 @@ export default class RedLightScene extends Phaser.Scene {
             oy,
             ang,
             len: this.spotLen,
-            half: this.spotHalf
+            half: this.spotHalf,
+            poly
         });
     }
 
-    // ---------------- Bullets / elimination ----------------
     shootBulletAt(guard, x, y) {
-        // tracer line + tiny muzzle + hit flash
         this.tracerG.clear();
-        const barrel = guard.getByName('barrel');
 
-        let angle = Phaser.Math.Angle.Between(x, y, barrel.x, barrel.y);
-        this.barrel.rotation = angle;
+        const barrel = guard.getByName("barrel");
+        if (!barrel) return;
 
-        // tracer
+        // Convert world target into guard-local coordinates
+        const localX = x - guard.x;
+        const localY = y - guard.y;
+
+        // Barrel points along +X because it's a horizontal rectangle
+        barrel.rotation = Phaser.Math.Angle.Between(
+            barrel.x,
+            barrel.y,
+            localX,
+            localY
+        );
+
+        // Compute muzzle point in world space
+        const muzzleLen = barrel.width * (1 - barrel.originX);
+        const muzzleX = guard.x + barrel.x + Math.cos(barrel.rotation) * muzzleLen;
+        const muzzleY = guard.y + barrel.y + Math.sin(barrel.rotation) * muzzleLen;
+
         this.tracerG.lineStyle(2, 0xff3a3a, 0.95);
         this.tracerG.beginPath();
-        this.tracerG.moveTo(barrel.x, barrel.y);
+        this.tracerG.moveTo(muzzleX, muzzleY);
         this.tracerG.lineTo(x, y);
         this.tracerG.strokePath();
 
-        // muzzle flash
         this.tracerG.fillStyle(0xffe35a, 0.85);
-        this.tracerG.fillCircle(barrel.x, barrel.y, 4);
+        this.tracerG.fillCircle(muzzleX, muzzleY, 4);
 
-        // hit flash
         const fx = this.add.rectangle(x, y, 140, 28, 0xff0000, 0.18).setDepth(300);
         this.tweens.add({
             targets: fx,
@@ -520,16 +504,19 @@ export default class RedLightScene extends Phaser.Scene {
             onComplete: () => fx.destroy()
         });
 
-        // clear tracer quickly
         this.time.delayedCall(90, () => this.tracerG.clear());
     }
 
     nearestGuardTo(x, y) {
         let best = this.guard1;
         let bestD = Phaser.Math.Distance.Between(best.x, best.y, x, y);
-        const g = this.guard2;
-        const d = Phaser.Math.Distance.Between(g.x, g.y, x, y);
-        if (d < bestD) { bestD = d; best = g; }
+
+        const d = Phaser.Math.Distance.Between(this.guard2.x, this.guard2.y, x, y);
+        if (d < bestD) {
+            best = this.guard2;
+            bestD = d;
+        }
+
         return best;
     }
 
@@ -541,34 +528,37 @@ export default class RedLightScene extends Phaser.Scene {
 
         const gx = c.sprite.x;
         const gy = c.sprite.y;
+
         const g = this.nearestGuardTo(gx, gy);
         this.shootBulletAt(g, gx, gy);
+
         beep(this, 140, 0.06, "square", 0.03);
         this.cameras.main.shake(120, 0.004);
 
-        // ragdrop-ish
         c.sprite.setTint(PAL.RED);
-        if (c.s?.body) c.sprite.body.moves = true;
+        if (c.sprite?.body) c.sprite.body.moves = true;
         c.sprite.body.setDrag(1400, 1400);
         c.sprite.setVelocity(-Phaser.Math.Between(60, 120), Phaser.Math.Between(-30, 30));
 
         this.time.delayedCall(320, () => {
-            if (!c.s?.active) return;
+            if (!c.sprite?.active) return;
             c.sprite.setVelocity(0, 0);
-            c.sprite.setScale(.35, .35);
-            c.sprite.setAngle(Phaser.Math.Between(-40, 40));
+            c.sprite.setScale(0.35, 0.35);
+            c.sprite.angle = 90;
         });
     }
 
-    // ---------------- Competitor AI ----------------
     updateCompetitors() {
         const now = this.time.now;
 
         for (const c of this.competitors) {
             if (!c.alive || c.finished) continue;
+
             if (c.sprite.x >= this.goalX - 10) {
                 c.finished = true;
                 c.sprite.setVelocity(0, 0);
+                c.sprite.anims.stop();
+                c.sprite.setFrame(0);
                 continue;
             }
 
@@ -580,18 +570,23 @@ export default class RedLightScene extends Phaser.Scene {
                 if (now > c.nextTargetAt) this.retarget(c, now);
 
                 const steerY = clamp((c.targetY - c.sprite.y) * 3.0, -120, 120);
-
                 let speed = c.baseSpeed;
+
+                if (speed !== 0) {
+                    if (c.plan === "CAUTIOUS") c.sprite.play("stickman_walk", true);
+                    else c.sprite.play("stickman_run", true);
+                }
+
                 let vy = steerY + lanePull * 0.25;
-                //               c.play(this.stickManAnim);
+
                 if (c.plan === "SPRINT") {
                     speed *= Phaser.Math.FloatBetween(1.05, 1.18);
                     vy += Math.sin(now * 0.006 + c._id) * (8 + 10 * c.panic);
                 } else if (c.plan === "CAUTIOUS") {
-                    speed *= Phaser.Math.FloatBetween(0.78, 0.92);
+                    speed *= Phaser.Math.FloatBetween(0.58, 0.72);
                     vy += Math.sin(now * 0.004 + c._id) * (6 + 8 * c.panic);
                 } else if (c.plan === "ZIGZAG") {
-                    const z = Math.sin(now * 0.010 + c._id) > 0 ? 1 : -1;
+                    const z = Math.sin(now * 0.01 + c._id) > 0 ? 1 : -1;
                     vy += z * c.zigDir * (22 + 24 * c.panic);
                     speed *= Phaser.Math.FloatBetween(0.92, 1.05);
                 } else if (c.plan === "DRIFT_UP") {
@@ -613,44 +608,60 @@ export default class RedLightScene extends Phaser.Scene {
                 if (c.frozen) {
                     c.frozen = false;
                     c.freezeUntil = 0;
-                    if (c.s?.body) c.sprite.body.moves = true;
+                    if (c.sprite?.body) c.sprite.body.moves = true;
                 }
 
-                c.sprite.setVelocity(speed, clamp(vy, -180, 180));
+                c.sprite.setVelocity(speed, clamp(vy, -80, 80));
             } else {
-                // RED
                 const shouldStop = now >= c.redStopAt;
 
                 if (c.frozen && now < c.freezeUntil) {
+                    c.sprite.anims.stop();
+                    c.sprite.setFrame(0);
                     c.sprite.setVelocity(0, 0);
                 } else if (!shouldStop) {
-                    // braking phase
-                    if (c.frozen) { c.frozen = false; c.freezeUntil = 0; c.sprite.body.moves = true; }
+                    if (c.frozen) {
+                        c.frozen = false;
+                        c.freezeUntil = 0;
+                        if (c.sprite?.body) c.sprite.body.moves = true;
+                    }
 
                     const t = clamp((now - c.stopStartedAt) / (c.reactionMs + 140), 0, 1);
                     const vx = Phaser.Math.Linear(c.sprite.body.velocity.x, 0, 0.08 + 0.22 * t);
                     const vy = Phaser.Math.Linear(c.sprite.body.velocity.y, 0, 0.08 + 0.22 * t);
                     c.sprite.setVelocity(vx, vy + lanePull * 0.18);
                 } else {
-                    // after reaction: creep/twitch or freeze
                     const inForcedFreeze = c.frozen && now < c.freezeUntil;
                     const creep = !inForcedFreeze && (Math.random() < c.risk);
                     const twitch = !inForcedFreeze && (Math.random() < (0.03 + 0.05 * c.panic));
 
                     if (creep) {
-                        if (c.frozen) { c.frozen = false; c.sprite.body.moves = true; }
-                        c.sprite.setVelocity(Phaser.Math.Between(8, 22), lanePull * 0.10);
+                        if (c.frozen) {
+                            c.frozen = false;
+                            if (c.sprite?.body) c.sprite.body.moves = true;
+                        }
+                        c.sprite.setVelocity(Phaser.Math.Between(8, 22), lanePull * 0.1);
                     } else if (twitch) {
-                        if (c.frozen) { c.frozen = false; c.sprite.body.moves = true; }
-                        c.sprite.setVelocity(Phaser.Math.Between(-7, 7), Phaser.Math.Between(-7, 7) + lanePull * 0.12);
+                        if (c.frozen) {
+                            c.frozen = false;
+                            if (c.sprite?.body) c.sprite.body.moves = true;
+                        }
+                        c.sprite.setVelocity(
+                            Phaser.Math.Between(-7, 7),
+                            Phaser.Math.Between(-7, 7) + lanePull * 0.12
+                        );
                     } else {
                         if (!c.frozen) {
                             c.frozen = true;
                             c.sprite.setVelocity(0, 0);
+                            c.sprite.anims.stop();
+                            c.sprite.setFrame(0);
                             c.sprite.body.moves = false;
                             c.freezeUntil = now + c.minFreezeMs;
                         } else {
                             c.sprite.setVelocity(0, 0);
+                            c.sprite.anims.stop();
+                            c.sprite.setFrame(0);
                         }
                     }
                 }
@@ -660,34 +671,84 @@ export default class RedLightScene extends Phaser.Scene {
         }
     }
 
-    // ---------------- Spotlight-only competitor elimination ----------------
+    rayHitsBodyFirst(ox, oy, tx, ty, targetBody, bodies, pad = 0) {
+        const dx0 = tx - ox;
+        const dy0 = ty - oy;
+        const len = Math.hypot(dx0, dy0);
+        if (len <= 0.0001) return false;
+
+        const dx = dx0 / len;
+        const dy = dy0 / len;
+
+        let bestT = Infinity;
+        let bestBody = null;
+
+        for (const b of bodies) {
+            if (!b || !b.enable) continue;
+
+            const hit = rayAABB(
+                ox,
+                oy,
+                dx,
+                dy,
+                b.x - pad,
+                b.y - pad,
+                b.right + pad,
+                b.bottom + pad
+            );
+
+            if (hit >= 0 && hit < bestT) {
+                bestT = hit;
+                bestBody = b;
+            }
+        }
+
+        return bestBody === targetBody && bestT <= len + pad;
+    }
+
     eliminateCompetitorsInSpotlightOnly() {
         if (this.green) return;
+        if (!this.youngHee) return;
 
-        // Only apply after cones are computed this frame
-        const cones = this.activeCones;
-        if (!cones || cones.length === 0) return;
+        const ox = this.youngHee.root.x;
+        const oy = this.youngHee.root.y - 34;
+        const ang = this.youngHee.currentAngle + Math.PI;
+
+        const bodies = [];
+        if (this.player?.sprite?.body?.enable) bodies.push(this.player.sprite.body);
+        for (const c of this.competitors) {
+            if (!c.alive || c.finished || c.eliminated) continue;
+            if (c.sprite?.body?.enable) bodies.push(c.sprite.body);
+        }
 
         for (const c of this.competitors) {
-            if (!c.alive || c.finished) continue;
-            const b = c.s?.body;
+            if (!c.alive || c.finished || c.eliminated) continue;
+
+            const b = c.sprite?.body;
             if (!b) continue;
 
             const v = Math.hypot(b.velocity.x, b.velocity.y);
             if (v <= this.spotMoveThresh) continue;
 
-            const cx = c.sprite.x;
-            const cy = c.sprite.y;
+            const cx = b.center.x;
+            const cy = b.center.y;
 
-            let inside = false;
-            for (const cone of cones) {
-                if (this.pointInCone(cx, cy, cone.ox, cone.oy, cone.ang, cone.half, cone.len)) {
-                    inside = true;
-                    break;
-                }
+            const vx = cx - ox;
+            const vy = cy - oy;
+            const dist = Math.hypot(vx, vy);
+            if (dist > this.spotLen) continue;
+
+            const a = Math.atan2(vy, vx);
+            const da = Phaser.Math.Angle.Wrap(a - ang);
+            if (Math.abs(da) > this.spotHalf) continue;
+
+            const visible = this.rayHitsBodyFirst(ox, oy, cx, cy, b, bodies, 2);
+
+            if (visible) {
+                c.sprite.anims.stop();
+                c.sprite.setFrame(0);
+                this.eliminateCompetitor(c, "SPOTTED");
             }
-
-            if (inside) this.eliminateCompetitor(c, "SPOTTED");
         }
     }
 
@@ -706,20 +767,17 @@ export default class RedLightScene extends Phaser.Scene {
         this.player.update();
         this.updateCompetitors();
         this.updateYoungHee();
-        // Raycast spotlights (visual + cone list)
         this.drawRaycastSpotlights();
-
-        // ONLY eliminate competitors if in spotlight
         this.eliminateCompetitorsInSpotlightOnly();
-
         this.updateCountText();
 
-        // Player rule (unchanged): still uses general RED threshold
         if (!this.green) {
             const v = this.player.getVelocityMag();
             if (v > this.threshold) this.dead = true;
         }
 
-        if (this.player.sprite.x >= this.goalX - 10) this.win = true;
+        if (this.player.sprite.x >= this.goalX - 10) {
+            this.win = true;
+        }
     }
 }

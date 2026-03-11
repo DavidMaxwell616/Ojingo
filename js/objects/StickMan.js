@@ -3,7 +3,6 @@ import { PAL } from "../config.js";
 export default class StickMan {
     constructor(scene, x, y, color = PAL.GRN) {
         this.scene = scene;
-
         this.sprite = scene.physics.add.sprite(x, y, "stickman");
         this.sprite.setTint(color);
         this.sprite.setScale(.35, .35);
@@ -30,7 +29,6 @@ export default class StickMan {
 
     update() {
         if (!this.alive) return;
-
         const left = this.cursors.left.isDown || this.wasd.A.isDown;
         const right = this.cursors.right.isDown || this.wasd.D.isDown;
         const up = this.cursors.up.isDown || this.wasd.W.isDown;
@@ -39,7 +37,8 @@ export default class StickMan {
         let vx = 0, vy = 0;
         if (left) vx -= 1;
         if (right) {
-            this.sprite.play(this.scene.stickManAnim);
+            const anim = this.scene.anims.anims.entries['stickman_run'];
+            this.sprite.play(anim, true);
             vx++;
         }
         if (up) vy -= 1;
@@ -49,7 +48,10 @@ export default class StickMan {
             const len = Math.hypot(vx, vy);
             vx /= len; vy /= len;
         }
-
+        if (vx === 0 && vy === 0) {
+            this.sprite.anims.stop();
+            this.sprite.setFrame(0);
+        }
         this._vx = vx * this.speed;
         this._vy = vy * this.speed;
 
@@ -59,6 +61,9 @@ export default class StickMan {
     kill() {
         this.alive = false;
         this.sprite.setVelocity(0, 0);
+        this.sprite.anims.stop();
+        this.sprite.setFrame(0);
+        this.rotation(90);
         this.sprite.setTint(PAL.RED);
     }
 

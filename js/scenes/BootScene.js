@@ -15,6 +15,7 @@ export default class BootScene extends Phaser.Scene {
 
     create() {
 
+
         // Create 1x1 pixel texture "px"
         const g = this.add.graphics();
         g.fillStyle(0xffffff, 1);
