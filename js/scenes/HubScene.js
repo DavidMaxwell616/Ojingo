@@ -68,11 +68,12 @@ export default class HubScene extends Phaser.Scene {
 
     moveSel(d) {
         beep(this, 520, 0.03, "square", 0.03);
-        this.sel = Phaser.Math.Wrap(this.sel + d, 0, 4);
+
+        this.sel = Phaser.Math.Wrap(this.sel + d, 0, ROUNDS.length);
+
         this.cursor.y = 170 + this.sel * 56;
 
-        // recolor list
-        this.list.iterate((child, idx) => {
+        this.list.list.forEach((child, idx) => {
             child.setColor(idx === this.sel ? "#35f2ff" : "#e8e8ff");
         });
     }

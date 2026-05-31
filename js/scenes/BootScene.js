@@ -4,14 +4,7 @@ import { CRTPipeline } from "../fx/CRTPipeline.js";
 export default class BootScene extends Phaser.Scene {
     constructor() { super("Boot"); }
 
-    preload() {
-        this.load.path = "../../assets/spritesheets/";
-        this.load.spritesheet('stickman', 'stickman.png', {
-            frameWidth: 76,
-            frameHeight: 123
-        });
 
-    }
 
     create() {
 

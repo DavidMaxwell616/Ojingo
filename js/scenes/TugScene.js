@@ -9,7 +9,7 @@ export default class TugScene extends Phaser.Scene {
 
     preload() {
         this.load.path = "../assets/images/";
-        this.load.image('background', 'background.png');
+        this.load.image('background', 'tugowar_background.png');
     }
     create() {
         this.world = new pl.World(pl.Vec2(0, 9.8));
@@ -211,7 +211,7 @@ export default class TugScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        return;
+
         this.world.step(delta / 1000);
 
         const leftPulling = this.keys.leftPull.isDown;

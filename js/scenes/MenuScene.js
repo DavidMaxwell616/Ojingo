@@ -1,6 +1,6 @@
 import { W, H, PAL } from "../config.js";
 import { addFrame, addHeader, makeRetroText, beep } from "../objects/UI.js";
-const pl = planck;
+
 export default class MenuScene extends Phaser.Scene {
     constructor() { super("Menu"); }
 
