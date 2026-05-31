@@ -18,5 +18,6 @@ export const PAL = {
     PLATFORM: 0x23263a,
 };
 
+export const PPM = 40;
 
 export const GAME_TITLE = "OJINGO";

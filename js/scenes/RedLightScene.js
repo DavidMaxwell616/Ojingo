@@ -3,7 +3,7 @@
 // - Bullets/tracers when a competitor is eliminated
 // - ONLY eliminate competitors if they are (a) moving on RED and (b) inside a spotlight cone
 
-import { W, H, PAL } from "../config.js";
+import { W, H, PAL, PPM } from "../config.js";
 import StickMan from "../objects/StickMan.js";
 import { addFrame, addHeader, makeRetroText, beep } from "../objects/UI.js";
 
@@ -37,7 +37,14 @@ export default class RedLightScene extends Phaser.Scene {
     constructor() {
         super("RedLight");
     }
+    preload() {
+        this.load.path = "../../assets/spritesheets/";
+        this.load.spritesheet('stickman', 'stickman.png', {
+            frameWidth: 76,
+            frameHeight: 123
+        });
 
+    }
     create() {
         this.cameras.main.setBackgroundColor(PAL.BG);
         this.cameras.main.setPostPipeline("CRTPipeline");

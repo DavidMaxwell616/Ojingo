@@ -20,8 +20,12 @@ const config = {
     antialias: false,
     physics: {
         default: "arcade",
+
         arcade: {
-            gravity: { y: 0 },
+            gravity: {
+                y: 0
+            },
+
             debug: false
         }
     },
@@ -34,7 +38,11 @@ const config = {
         TugScene,
         GlassBridgeScene,
         FinalScene
-    ]
+    ],
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
 };
 
 const game = new Phaser.Game(config);
@@ -51,3 +59,8 @@ game.events.once("postrender", () => {
 
 // Make pipeline available via game.registry once boot runs
 window.__OJINGO__ = { CRTPipeline };
+
+
+
+
+
