@@ -34,7 +34,7 @@ export default class TugScene extends Phaser.Scene {
 
         this.centerX = W / 2;
         this.eliminateMargin = 110;
-
+        this.currentScore = 0;
         this.links = [];
         this.players = [];
         this.joints = [];
@@ -88,16 +88,15 @@ export default class TugScene extends Phaser.Scene {
 
         beep(this, 980, 0.12, "square", 0.05);
 
-        // calculate score
 
-        // const score = Math.max(0, 10000 - aliveCount * 500);
+        this.currentScore += this.win ? 10000 : 0;
 
         // show win text
         const winText = makeRetroText(
             this,
             W / 2,
             H / 2 - 40,
-            $` " TEAM WON"`,
+            this.win ? "GREEN" : "RED" + " TEAM WON",
             32,
             "#48ff7a"
         ).setDepth(1000);
@@ -106,7 +105,7 @@ export default class TugScene extends Phaser.Scene {
             this,
             W / 2,
             H / 2 + 10,
-            `SCORE: ${score}`,
+            `SCORE: ${this.currentScore}`,
             22,
             "#ffe35a"
         ).setDepth(1000);
@@ -116,7 +115,7 @@ export default class TugScene extends Phaser.Scene {
 
         this.registry.set(
             "money",
-            currentMoney + score
+            currentMoney + this.currentScore
         );
 
         // return to hub after 5 sec
@@ -333,7 +332,27 @@ export default class TugScene extends Phaser.Scene {
             )
         );
         body.ropeJoint = joint;
+        if (isAnchor) {
+            const endLink =
+                team === "left"
+                    ? this.links[0]
+                    : this.links[this.links.length - 1];
 
+            body.anchorEndJoint = this.world.createJoint(
+                pl.DistanceJoint(
+                    {
+                        collideConnected: false,
+                        frequencyHz: 45,
+                        dampingRatio: 0.15,
+                        length: this.px(1)
+                    },
+                    body,
+                    endLink,
+                    body.getWorldCenter(),
+                    endLink.getWorldCenter()
+                )
+            );
+        }
         this.players.push(body);
     }
 
@@ -371,10 +390,12 @@ export default class TugScene extends Phaser.Scene {
             const x = this.meters(p.getPosition().x);
 
             if (p.team === "left" && x > this.centerX - this.eliminateMargin) {
+                this.currentScore -= p.sprite.strength * 1000;
                 this.eliminatePlayer(p);
             }
 
             if (p.team === "right" && x < this.centerX + this.eliminateMargin) {
+                this.currentScore += p.sprite.strength * 1000;
                 this.eliminatePlayer(p);
             }
         }
@@ -462,8 +483,7 @@ export default class TugScene extends Phaser.Scene {
         );
 
         if (remaining.length <= 0) {
-
-            this.win = true;
+            this.win = p.team === "right";
             this.gameOver();
         }
         // cleanup after falling away
