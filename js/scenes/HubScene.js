@@ -60,10 +60,10 @@ export default class HubScene extends Phaser.Scene {
     }
 
     updateHub() {
-        const money = this.registry.get("money") || 0;
-        const deaths = this.registry.get("deaths") || 0;
-        this.moneyText.setText(`₩ ${money.toString().padStart(6, "0")}`);
-        this.deathText.setText(`DEAD: ${deaths}`);
+        const money = this.registry.get("money") || 0.00;
+        const lives = this.registry.get("lives") || 3;
+        this.moneyText.setText(`$${money.toString().padStart(6, "0") + '.00'}`);
+        this.deathText.setText(`LIVES: ${lives}`);
     }
 
     moveSel(d) {
@@ -87,8 +87,8 @@ export default class HubScene extends Phaser.Scene {
     resetRun() {
         beep(this, 220, 0.08, "sawtooth", 0.03);
         this.registry.set("roundIndex", 0);
-        this.registry.set("money", 0);
-        this.registry.set("deaths", 0);
+        this.registry.set("money", 0.00);
+        this.registry.set("lives", 3);
         this.scene.restart();
     }
 }

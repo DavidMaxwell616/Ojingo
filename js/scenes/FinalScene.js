@@ -152,7 +152,7 @@ export default class FinalScene extends Phaser.Scene {
         if (this.state !== "PLAY") return;
         this.state = "LOSE";
         beep(this, 110, 0.12, "sawtooth", 0.05);
-        this.registry.set("deaths", (this.registry.get("deaths") || 0) + 1);
+        this.registry.set("lives", (this.registry.get("lives") || 0) + 1);
 
         this.attacker.kill();
         this.def.setVelocity(0, 0);

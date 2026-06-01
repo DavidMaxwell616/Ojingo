@@ -10,6 +10,16 @@ export default class TugScene extends Phaser.Scene {
     preload() {
         this.load.path = "../assets/images/";
         this.load.image('background', 'tugowar_background.png');
+        this.load.path = "../assets/spritesheets/";
+        this.load.spritesheet('greenTugger', 'green tugger.png', {
+            frameWidth: 110,
+            frameHeight: 110
+        });
+        this.load.spritesheet('redTugger', 'red tugger.png', {
+            frameWidth: 110,
+            frameHeight: 110
+        });
+
     }
     create() {
         this.world = new pl.World(pl.Vec2(0, 9.8));
@@ -21,7 +31,7 @@ export default class TugScene extends Phaser.Scene {
             .setDepth(-100);
 
         this.centerX = this.w / 2;
-        this.eliminateMargin = 45;
+        this.eliminateMargin = 110;
 
         this.links = [];
         this.players = [];
@@ -30,12 +40,33 @@ export default class TugScene extends Phaser.Scene {
         this.createGround();
         this.createRope();
         this.createTeams();
-
-        this.keys = this.input.keyboard.addKeys({
-            leftPull: "A",
-            rightPull: "L"
+        this.anims.create({
+            key: "greenTuggerPull",
+            frames: this.anims.generateFrameNumbers("greenTugger", {
+                start: 0,
+                end: 3
+            }),
+            frameRate: 10,
+            repeat: -1
         });
 
+        this.anims.create({
+            key: "redTuggerPull",
+            frames: this.anims.generateFrameNumbers("redTugger", {
+                start: 0,
+                end: 3
+            }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.keys = this.input.keyboard.addKeys({
+            leftPull: "A",
+            rightPull: "L",
+            reset: "R",
+        });
+        this.keys.reset.on("down", () => {
+            this.scene.restart();
+        });
         this.add.text(20, 20, "A = left team pull | L = right team pull", {
             fontSize: "18px",
             color: "#ffffff"
@@ -51,7 +82,7 @@ export default class TugScene extends Phaser.Scene {
     }
 
     createGround() {
-        this.groundY = this.h * .53;
+        this.groundY = this.h * 0.53;
 
         this.groundBody = this.world.createBody();
 
@@ -64,16 +95,23 @@ export default class TugScene extends Phaser.Scene {
 
         groundFix.setFriction(1.0);
 
-        this.add.line(
-            0,
-            0,
-            this.centerX,
-            this.groundY - 120,
-            this.centerX,
-            this.groundY + 30,
-            0xff0000
-        ).setLineWidth(4);
+        // invisible left wall
+        this.groundBody.createFixture(
+            pl.Edge(
+                pl.Vec2(this.px(20), this.px(0)),
+                pl.Vec2(this.px(20), this.px(this.h))
+            )
+        );
 
+        // invisible right wall
+        this.groundBody.createFixture(
+            pl.Edge(
+                pl.Vec2(this.px(this.w - 20), this.px(0)),
+                pl.Vec2(this.px(this.w - 20), this.px(this.h))
+            )
+        );
+
+        //show elimination zone
         this.add.rectangle(
             this.centerX,
             this.groundY - 40,
@@ -85,11 +123,13 @@ export default class TugScene extends Phaser.Scene {
     }
 
     createRope() {
-        const count = 20;
-        const spacing = 24;
-        const startX = this.centerX - ((count - 1) * spacing) / 2;
-        const y = this.groundY - 45;
+        const count = 28;
+        const spacing = 12;
+        const linkW = 14;
+        const linkH = 4;
 
+        const startX = this.centerX - ((count - 1) * spacing) / 2;
+        const y = this.groundY - 35;
         let prev = null;
 
         for (let i = 0; i < count; i++) {
@@ -99,18 +139,21 @@ export default class TugScene extends Phaser.Scene {
                 angularDamping: 1.5
             });
 
-            body.createFixture(pl.Box(this.px(10), this.px(4)), {
-                density: 0.8,
-                friction: 0.8,
-                restitution: 0
-            });
+            body.createFixture(
+                pl.Box(this.px(linkW / 2), this.px(linkH / 2)),
+                {
+                    density: 0.8,
+                    friction: 1.0,
+                    restitution: 0
+                }
+            );
 
             const sprite = this.add.rectangle(
                 startX + i * spacing,
                 y,
-                20,
-                8,
-                0xd6a85a
+                linkW,
+                linkH,
+                0xffffff
             );
 
             body.sprite = sprite;
@@ -120,9 +163,9 @@ export default class TugScene extends Phaser.Scene {
                 const joint = this.world.createJoint(
                     pl.DistanceJoint(
                         {
-                            frequencyHz: 8,
-                            dampingRatio: 0.7,
-                            length: this.px(spacing)
+                            frequencyHz: 28,
+                            dampingRatio: 0.35,
+                            length: this.px(spacing * 0.72)
                         },
                         prev,
                         body,
@@ -139,33 +182,40 @@ export default class TugScene extends Phaser.Scene {
     }
 
     createTeams() {
-        const leftRopeIndex = 3;
-        const rightRopeIndex = this.links.length - 4;
+        const leftLinks = [0, 4, 7, 10, 13];
+
+        const rightLinks = [
+            this.links.length - 1,
+            this.links.length - 5,
+            this.links.length - 8,
+            this.links.length - 11,
+            this.links.length - 14
+        ];
 
         for (let i = 0; i < 5; i++) {
             this.createPlayer({
                 team: "left",
+                isAnchor: i === 0,
                 x: this.centerX - 140 - i * 48,
                 y: this.groundY - 32,
-                color: 0x00aaff,
                 strength: Phaser.Math.FloatBetween(13, 23),
                 friction: Phaser.Math.FloatBetween(0.7, 1.4),
-                ropeLink: this.links[leftRopeIndex]
+                ropeLink: this.links[leftLinks[i]]
             });
 
             this.createPlayer({
                 team: "right",
+                isAnchor: i === 0,
                 x: this.centerX + 140 + i * 48,
                 y: this.groundY - 32,
-                color: 0xff4444,
                 strength: Phaser.Math.FloatBetween(13, 23),
                 friction: Phaser.Math.FloatBetween(0.7, 1.4),
-                ropeLink: this.links[rightRopeIndex]
+                ropeLink: this.links[rightLinks[i]]
             });
         }
     }
 
-    createPlayer({ team, x, y, color, strength, friction, ropeLink }) {
+    createPlayer({ team, isAnchor = false, x, y, strength, friction, ropeLink }) {
         const body = this.world.createDynamicBody({
             position: pl.Vec2(this.px(x), this.px(y)),
             fixedRotation: true,
@@ -178,25 +228,27 @@ export default class TugScene extends Phaser.Scene {
             restitution: 0
         });
 
-        const sprite = this.add.rectangle(x, y, 24, 56, color);
-        const label = this.add.text(x - 14, y - 46, strength.toFixed(0), {
+        const sprite = this.add.sprite(x, y, team === "left" ? "greenTugger" : "redTugger")
+            .setScale(.5);
+        const label = this.add.text(x - 18, y - 46, isAnchor ? "ANCHOR" : strength.toFixed(0), {
             fontSize: "12px",
-            color: "#ffffff"
+            color: isAnchor ? "#ffe35a" : "#ffffff"
         });
 
         body.sprite = sprite;
         body.label = label;
         body.team = team;
-        body.strength = strength;
-        body.friction = friction;
+        body.isAnchor = isAnchor;
+        body.strength = isAnchor ? strength * 1.8 : strength;
+        body.friction = isAnchor ? friction * 1.8 : friction;
         body.eliminated = false;
+
+        const ropeAnchor = ropeLink.getWorldCenter();
 
         const joint = this.world.createJoint(
             pl.DistanceJoint(
                 {
-                    frequencyHz: 5,
-                    dampingRatio: 0.8,
-                    length: this.px(Math.abs(x - this.meters(ropeLink.getPosition().x)))
+                    collideConnected: false
                 },
                 body,
                 ropeLink,
@@ -204,7 +256,6 @@ export default class TugScene extends Phaser.Scene {
                 ropeLink.getWorldCenter()
             )
         );
-
         body.ropeJoint = joint;
 
         this.players.push(body);
@@ -221,12 +272,24 @@ export default class TugScene extends Phaser.Scene {
             if (p.eliminated) continue;
 
             const dir = p.team === "left" ? -1 : 1;
-            const isPulling =
-                p.team === "left" ? leftPulling : rightPulling;
+            const isPulling = p.team === "left" ? leftPulling : rightPulling;
 
             if (isPulling) {
-                const force = p.strength * p.friction;
-                p.applyForceToCenter(pl.Vec2(dir * force, 0), true);
+                const force = p.strength * p.friction * 8;
+
+                p.applyForceToCenter(
+                    pl.Vec2(dir * force, 0),
+                    true
+                );
+
+                if (p.team === "left") {
+                    p.sprite.play("greenTuggerPull", true);
+                } else {
+                    p.sprite.play("redTuggerPull", true);
+                }
+            } else {
+                p.sprite.anims.stop();
+                p.sprite.setFrame(0);
             }
 
             const x = this.meters(p.getPosition().x);
@@ -244,23 +307,98 @@ export default class TugScene extends Phaser.Scene {
     }
 
     eliminatePlayer(p) {
+
+        if (p.eliminated) return;
+
         p.eliminated = true;
 
+        // detach from rope
         if (p.ropeJoint) {
             this.world.destroyJoint(p.ropeJoint);
             p.ropeJoint = null;
         }
 
-        p.sprite.setFillStyle(0x555555);
-        p.label.setText("OUT");
+        // stop pull animation
+        p.sprite.anims.stop();
+
+        // falling animation
+        if (p.team === "left") {
+            p.sprite.play("greenTuggerFall", true);
+        } else {
+            p.sprite.play("redTuggerFall", true);
+        }
+
+        // OUT label
+        if (p.label) {
+            p.label.setText("OUT");
+            p.label.setColor("#ff4444");
+        }
+
+        // darker tint
+        p.sprite.setTint(0x666666);
+
+        // slippery body
+        const fixture = p.getFixtureList();
+
+        if (fixture) {
+            fixture.setFriction(0.02);
+        }
+
+        // allow spinning
+        p.setFixedRotation(false);
+
+        // stronger gravity
+        p.setGravityScale(3);
+
+        // launch off platform
+        const dir = p.team === "left" ? 1 : -1;
 
         p.applyLinearImpulse(
-            pl.Vec2(0, -5),
+            pl.Vec2(
+                dir * 10,
+                14
+            ),
             p.getWorldCenter(),
             true
         );
+
+        // spin while falling
+        p.setAngularVelocity(
+            Phaser.Math.FloatBetween(-12, 12)
+        );
+
+        // fall through platform after delay
+        this.time.delayedCall(600, () => {
+
+            const fixture = p.getFixtureList();
+
+            if (fixture) {
+                fixture.setSensor(true);
+            }
+        });
+
+        // cleanup after falling away
+        this.time.delayedCall(5000, () => {
+
+            if (p.sprite) {
+                p.sprite.destroy();
+            }
+
+            if (p.label) {
+                p.label.destroy();
+            }
+
+            this.world.destroyBody(p);
+        });
     }
 
+    eliminateTeam(team) {
+        for (const p of this.players) {
+            if (p.team === team && !p.eliminated) {
+                this.eliminatePlayer(p);
+            }
+        }
+    }
     syncSprites() {
         for (const link of this.links) {
             const pos = link.getPosition();

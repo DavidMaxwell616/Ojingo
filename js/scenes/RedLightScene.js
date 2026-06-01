@@ -833,9 +833,73 @@ export default class RedLightScene extends Phaser.Scene {
                 this.eliminatePlayer();
             }
         }
+        if (this.player.sprite.x >= this.goalX && !this.win) {
 
-        if (this.player.sprite.x >= this.goalX) {
             this.win = true;
+
+            beep(this, 980, 0.12, "square", 0.05);
+
+            // freeze player
+            this.player.sprite.setVelocity(0, 0);
+            this.player.sprite.anims.stop();
+            this.player.sprite.setFrame(0);
+
+            // freeze competitors
+            for (const c of this.competitors) {
+
+                if (!c?.sprite?.active) continue;
+
+                c.sprite.setVelocity(0, 0);
+                c.sprite.anims.stop();
+                c.sprite.setFrame(0);
+
+                if (c.sprite.body) {
+                    c.sprite.body.moves = false;
+                }
+            }
+
+            // calculate score
+            const aliveCount = this.competitors.filter(c => c.alive).length;
+
+            const score = Math.max(0, 10000 - aliveCount * 500);
+
+            // show win text
+            const winText = makeRetroText(
+                this,
+                W / 2,
+                H / 2 - 40,
+                "LEVEL COMPLETED",
+                64,
+                "#48ff7a"
+            ).setDepth(1000);
+
+            const scoreText = makeRetroText(
+                this,
+                W / 2,
+                H / 2 + 10,
+                `SCORE: ${score}`,
+                64,
+                "#ffe35a"
+            ).setDepth(1000);
+
+            // save score
+            const currentMoney = this.registry.get("money") || 0;
+
+            this.registry.set(
+                "money",
+                currentMoney + score
+            );
+
+            // return to hub after 5 sec
+            this.time.delayedCall(5000, () => {
+
+                const nextRound =
+                    (this.registry.get("roundIndex") || 0) + 1;
+
+                this.registry.set("roundIndex", nextRound);
+
+                this.scene.start("Hub");
+            });
         }
     }
 }

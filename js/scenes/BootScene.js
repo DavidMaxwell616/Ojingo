@@ -40,8 +40,8 @@ export default class BootScene extends Phaser.Scene {
 
         // Global registry defaults
         this.registry.set("roundIndex", 0);
-        this.registry.set("money", 0);
-        this.registry.set("deaths", 0);
+        this.registry.set("money", 0.00);
+        this.registry.set("lives", 3);
 
         this.scene.start("Menu");
     }
