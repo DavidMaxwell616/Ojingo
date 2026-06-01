@@ -1,4 +1,5 @@
-import { PPM } from "../config.js";
+import { PPM, PAL, W, H } from "../config.js";
+import { beep, makeRetroText } from "../objects/UI.js";
 
 const pl = planck;
 
@@ -22,15 +23,16 @@ export default class TugScene extends Phaser.Scene {
 
     }
     create() {
+        this.cameras.main.setBackgroundColor(PAL.BG);
+        this.cameras.main.setPostPipeline("CRTPipeline");
+
         this.world = new pl.World(pl.Vec2(0, 9.8));
-        this.w = this.scale.width;
-        this.h = this.scale.height;
         this.background = this.add.image(0, 0, "background")
             .setOrigin(0, 0)
-            .setDisplaySize(this.w, this.h)
+            .setDisplaySize(W, H)
             .setDepth(-100);
 
-        this.centerX = this.w / 2;
+        this.centerX = W / 2;
         this.eliminateMargin = 110;
 
         this.links = [];
@@ -40,11 +42,12 @@ export default class TugScene extends Phaser.Scene {
         this.createGround();
         this.createRope();
         this.createTeams();
+
         this.anims.create({
             key: "greenTuggerPull",
             frames: this.anims.generateFrameNumbers("greenTugger", {
                 start: 0,
-                end: 3
+                end: 17
             }),
             frameRate: 10,
             repeat: -1
@@ -81,33 +84,92 @@ export default class TugScene extends Phaser.Scene {
         return x * PPM;
     }
 
+    gameOver() {
+
+        beep(this, 980, 0.12, "square", 0.05);
+
+        // calculate score
+
+        // const score = Math.max(0, 10000 - aliveCount * 500);
+
+        // show win text
+        const winText = makeRetroText(
+            this,
+            W / 2,
+            H / 2 - 40,
+            $` " TEAM WON"`,
+            32,
+            "#48ff7a"
+        ).setDepth(1000);
+
+        const scoreText = makeRetroText(
+            this,
+            W / 2,
+            H / 2 + 10,
+            `SCORE: ${score}`,
+            22,
+            "#ffe35a"
+        ).setDepth(1000);
+
+        // save score
+        const currentMoney = this.registry.get("money") || 0;
+
+        this.registry.set(
+            "money",
+            currentMoney + score
+        );
+
+        // return to hub after 5 sec
+        this.time.delayedCall(5000, () => {
+
+            const nextRound =
+                (this.registry.get("roundIndex") || 0) + 1;
+
+            this.registry.set("roundIndex", nextRound);
+
+            this.scene.start("Hub");
+        });
+    }
+
+
     createGround() {
-        this.groundY = this.h * 0.53;
+        this.groundY = H * 0.53;
 
         this.groundBody = this.world.createBody();
 
-        const groundFix = this.groundBody.createFixture(
+        const gapHalf = this.eliminateMargin;
+
+        const leftGroundFix = this.groundBody.createFixture(
             pl.Edge(
                 pl.Vec2(this.px(0), this.px(this.groundY)),
-                pl.Vec2(this.px(this.w), this.px(this.groundY))
+                pl.Vec2(this.px(this.centerX - gapHalf), this.px(this.groundY))
             )
         );
 
-        groundFix.setFriction(1.0);
+        leftGroundFix.setFriction(1.0);
+
+        const rightGroundFix = this.groundBody.createFixture(
+            pl.Edge(
+                pl.Vec2(this.px(this.centerX + gapHalf), this.px(this.groundY)),
+                pl.Vec2(this.px(W), this.px(this.groundY))
+            )
+        );
+
+        rightGroundFix.setFriction(1.0);
 
         // invisible left wall
         this.groundBody.createFixture(
             pl.Edge(
                 pl.Vec2(this.px(20), this.px(0)),
-                pl.Vec2(this.px(20), this.px(this.h))
+                pl.Vec2(this.px(20), this.px(H))
             )
         );
 
         // invisible right wall
         this.groundBody.createFixture(
             pl.Edge(
-                pl.Vec2(this.px(this.w - 20), this.px(0)),
-                pl.Vec2(this.px(this.w - 20), this.px(this.h))
+                pl.Vec2(this.px(W - 20), this.px(0)),
+                pl.Vec2(this.px(W - 20), this.px(H))
             )
         );
 
@@ -195,7 +257,7 @@ export default class TugScene extends Phaser.Scene {
         for (let i = 0; i < 5; i++) {
             this.createPlayer({
                 team: "left",
-                isAnchor: i === 0,
+                isAnchor: i === 4,
                 x: this.centerX - 140 - i * 48,
                 y: this.groundY - 32,
                 strength: Phaser.Math.FloatBetween(13, 23),
@@ -205,7 +267,7 @@ export default class TugScene extends Phaser.Scene {
 
             this.createPlayer({
                 team: "right",
-                isAnchor: i === 0,
+                isAnchor: i === 4,
                 x: this.centerX + 140 + i * 48,
                 y: this.groundY - 32,
                 strength: Phaser.Math.FloatBetween(13, 23),
@@ -215,7 +277,15 @@ export default class TugScene extends Phaser.Scene {
         }
     }
 
-    createPlayer({ team, isAnchor = false, x, y, strength, friction, ropeLink }) {
+    createPlayer({
+        team,
+        isAnchor,
+        x,
+        y,
+        strength,
+        friction,
+        ropeLink
+    }) {
         const body = this.world.createDynamicBody({
             position: pl.Vec2(this.px(x), this.px(y)),
             fixedRotation: true,
@@ -228,8 +298,14 @@ export default class TugScene extends Phaser.Scene {
             restitution: 0
         });
 
-        const sprite = this.add.sprite(x, y, team === "left" ? "greenTugger" : "redTugger")
-            .setScale(.5);
+        const scale = isAnchor ? 0.65 : 0.5;
+
+        const sprite = this.add.sprite(
+            x,
+            y,
+            team === "left" ? "greenTugger" : "redTugger"
+        ).setScale(scale);
+
         const label = this.add.text(x - 18, y - 46, isAnchor ? "ANCHOR" : strength.toFixed(0), {
             fontSize: "12px",
             color: isAnchor ? "#ffe35a" : "#ffffff"
@@ -312,8 +388,9 @@ export default class TugScene extends Phaser.Scene {
 
         p.eliminated = true;
 
-        // detach from rope
-        if (p.ropeJoint) {
+        // NON-ANCHORS detach immediately
+        // anchors keep rope attached while falling
+        if (!p.isAnchor && p.ropeJoint) {
             this.world.destroyJoint(p.ropeJoint);
             p.ropeJoint = null;
         }
@@ -377,8 +454,26 @@ export default class TugScene extends Phaser.Scene {
             }
         });
 
+        // check if entire team has been eliminated
+        const remaining = this.players.filter(
+            other =>
+                other.team === p.team &&
+                !other.eliminated
+        );
+
+        if (remaining.length <= 0) {
+
+            this.win = true;
+            this.gameOver();
+        }
         // cleanup after falling away
         this.time.delayedCall(5000, () => {
+
+            // anchors finally detach here
+            if (p.ropeJoint) {
+                this.world.destroyJoint(p.ropeJoint);
+                p.ropeJoint = null;
+            }
 
             if (p.sprite) {
                 p.sprite.destroy();
@@ -392,13 +487,6 @@ export default class TugScene extends Phaser.Scene {
         });
     }
 
-    eliminateTeam(team) {
-        for (const p of this.players) {
-            if (p.team === team && !p.eliminated) {
-                this.eliminatePlayer(p);
-            }
-        }
-    }
     syncSprites() {
         for (const link of this.links) {
             const pos = link.getPosition();

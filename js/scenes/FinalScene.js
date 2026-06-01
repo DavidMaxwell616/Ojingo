@@ -152,7 +152,7 @@ export default class FinalScene extends Phaser.Scene {
         if (this.state !== "PLAY") return;
         this.state = "LOSE";
         beep(this, 110, 0.12, "sawtooth", 0.05);
-        this.registry.set("lives", (this.registry.get("lives") || 0) + 1);
+        this.registry.set("lives", (this.registry.get("lives") || 3) - 1);
 
         this.attacker.kill();
         this.def.setVelocity(0, 0);
@@ -168,7 +168,7 @@ export default class FinalScene extends Phaser.Scene {
         this.state = "WIN";
         beep(this, 980, 0.1, "square", 0.05);
 
-        this.registry.set("money", (this.registry.get("money") || 0) + 3000);
+        this.registry.set("money", (this.registry.get("money") || 0) + 3000).toFixed(2);
         this.registry.set("roundIndex", 4);
 
         this.attacker.sprite.setVelocity(0, 0);

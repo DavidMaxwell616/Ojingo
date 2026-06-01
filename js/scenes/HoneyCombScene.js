@@ -134,14 +134,14 @@ export default class HoneycombScene extends Phaser.Scene {
 
     fail() {
         beep(this, 120, 0.12, "sawtooth", 0.04);
-        this.registry.set("lives", (this.registry.get("lives") || 0) + 1);
+        this.registry.set("lives", (this.registry.get("lives") || 3) - 1);
         makeRetroText(this, W / 2, H / 2, "CRACKED", 34, "#ff3a3a").setShadow(0, 3, "#000", 5, true, true);
         this.time.delayedCall(1200, () => this.scene.start("Hub"));
     }
 
     win() {
         beep(this, 980, 0.08, "square", 0.04);
-        this.registry.set("money", (this.registry.get("money") || 0) + 1800);
+        this.registry.set("money", (this.registry.get("money") || 0) + 1800).toFixed(2);
         const idx = this.registry.get("roundIndex") || 0;
         this.registry.set("roundIndex", Math.max(idx, 2));
         makeRetroText(this, W / 2, H / 2, "CLEAN CUT", 34, "#48ff7a").setShadow(0, 3, "#000", 5, true, true);
